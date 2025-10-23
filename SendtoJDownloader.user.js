@@ -1,0 +1,49 @@
+// ==UserScript==
+// @name         Send to JDownloader
+// @author       ACF
+// @version      1.0
+// @description  Send URLs to JDownloader via the right click context menu. TamperMonkey only!
+// @namespace    https://acf.me.uk/
+// @include      *
+// @grant        GM_registerMenuCommand
+// @grant        GM_xmlhttpRequest
+// @run-at       document-start
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    function sendToJDownloader(downloadUrl) {
+        var jdownloaderUrl = 'http://127.0.0.1:9666/flash/add?urls='+downloadUrl;
+
+        GM.xmlHttpRequest({
+            method: 'POST',
+            url: jdownloaderUrl,
+            headers : {
+                Referer: "http://localhost/"
+            },
+            data: 'urls='+ downloadUrl,
+            onload: function(response) {
+                console.log('URL sent to JDownloader: '+downloadUrl);
+            },
+            onerror: function(error) {
+                console.error('Error sending URL to JDownloader:', error);
+            }
+        });
+    }
+
+    let clickedEl = null;
+
+    document.addEventListener("contextmenu", function(event){
+        clickedEl = event.target;
+    });
+
+    GM_registerMenuCommand("Grab Link", () => {
+        if(clickedEl){
+            console.log(`the clicked element is :`)
+            console.log(clickedEl)
+            const target = clickedEl.closest("a");
+            sendToJDownloader(target.href);
+        }
+    });
+})();
