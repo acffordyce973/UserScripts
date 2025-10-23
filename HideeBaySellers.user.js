@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hide eBay Sellers
 // @namespace    https://www.ebay.co.uk/
-// @version      0.5
+// @version      0.6
 // @description  Adds a blacklist for sellers on eBay that will remove their results.
 // @author       xdpirate, ACF
 // @license      GPLv3
@@ -56,13 +56,13 @@ newBox.innerHTML = `
 <div id="eBSBOuterDiv">
     <span id="eBSBToggleButton" title="Hide eBay Sellers"><b>Stats:</b><br>Inactive</span>
         <div id="eBSBInnerDiv" class="hidden">
-            <br><b>Hide eBay Sellers</b><br><br>
+            <br><b>Hide eBay Sellers - Settings</b><br>
             Hide sellers with a feedback percentage less than:<br>
-            <input type="number" id="eBSBFeedbackPercentage" min="0" max="100" value="${userFeedback}"><br><br>
+            <input type="number" id="eBSBFeedbackPercentage" min="0" max="100" value="${userFeedback}"><br>
             Hide sellers with a feedback total less than:<br>
-            <input type="number" id="eBSBFeedbackAmount" min="0" max="500" value="${userRatings}"><br><br>
+            <input type="number" id="eBSBFeedbackAmount" min="0" max="500" value="${userRatings}"><br>
             Comma-separated list of blacklisted sellers:<br>
-            <textarea id="eBSBBlacklistArea" rows="42" cols="270">${userBlacklist}</textarea><br><br>
+            <textarea id="eBSBBlacklistArea" rows="45" cols="264">${userBlacklist}</textarea><br>
             <input type="button" value="Save & Reload" id="eBSBSaveButton">
         <div>
     </div>
