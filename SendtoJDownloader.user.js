@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         Send to JDownloader
+// @namespace    acf.me.uk
+// @description  Send URLs to JDownloader via the right click context menu. TamperMonkey only!
 // @author       ACF
 // @version      1.0
-// @description  Send URLs to JDownloader via the right click context menu. TamperMonkey only!
-// @namespace    https://acf.me.uk/
+// @updateURL    https://github.com/acffordyce973/UserScripts/raw/refs/heads/main/SendtoJDownloader.user.js
 // @include      *
 // @grant        GM_registerMenuCommand
 // @grant        GM_xmlhttpRequest
