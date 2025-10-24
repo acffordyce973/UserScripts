@@ -3,10 +3,11 @@
 // @namespace    acf.me.uk
 // @description  Send torrents to qBittorrent via the right click context menu. TamperMonkey only!
 // @author       ACF, MSerj
-// @version      0.1
+// @version      0.2
 // @updateURL    https://github.com/acffordyce973/UserScripts/raw/refs/heads/main/SendtoqBittorrent.user.js
 // @include      *
 // @grant        GM_registerMenuCommand
+// @grant        GM_notification
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_xmlhttpRequest
@@ -58,7 +59,12 @@ function sendToQBittorrent(downloadUrl, category) {
                     data: `urls=${encodeURIComponent(downloadUrl)}&category=${category}`,
                     onload: function(response) {
                         if (response.status === 200) {
-                            alert("Torrent added successfully.");
+                            if (category == "") { category="Default"; }
+                            GM_notification({text: downloadUrl, title: `Torrent Added to ${category}`, url: qBittorrentUrl, onclick: (event) =>
+                                {
+                                    console.log("Notification was clicked.");
+                                },
+                            });
                         } else {
                             alert(`Failed to add torrent: ${response.responseText}`);
                         }
