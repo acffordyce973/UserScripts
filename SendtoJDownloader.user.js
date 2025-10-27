@@ -4,6 +4,7 @@
 // @description  Send URLs to JDownloader via the right click context menu. TamperMonkey only!
 // @author       ACF
 // @version      0.3
+// @downloadURL  https://github.com/acffordyce973/UserScripts/raw/refs/heads/main/SendtoJDownloader.user.js
 // @updateURL    https://github.com/acffordyce973/UserScripts/raw/refs/heads/main/SendtoJDownloader.user.js
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=jdownloader.org
 // @include      *
