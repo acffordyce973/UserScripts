@@ -3,8 +3,10 @@
 // @namespace    acf.me.uk
 // @description  Send torrents to qBittorrent via the right click context menu. TamperMonkey only!
 // @author       ACF, MSerj
-// @version      0.2
+// @version      0.3
+// downloadURL   https://github.com/acffordyce973/UserScripts/raw/refs/heads/main/SendtoqBittorrent.user.js
 // @updateURL    https://github.com/acffordyce973/UserScripts/raw/refs/heads/main/SendtoqBittorrent.user.js
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=qbittorrent.org
 // @include      *
 // @grant        GM_registerMenuCommand
 // @grant        GM_notification
