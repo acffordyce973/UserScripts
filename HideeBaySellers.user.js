@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         Hide eBay Sellers
 // @namespace    https://www.ebay.co.uk/
-// @version      0.6
-// @description  Adds a blacklist for sellers on eBay that will remove their results.
+// @version      0.7
+// @description  Adds a blacklist for sellers on eBay that will remove their results. Name blacklist should be comma-separated (no spaces) and supports * as a wildcard for one or more characters.
 // @author       xdpirate, ACF
 // @license      GPLv3
 // @updateURL    https://github.com/acffordyce973/UserScripts/raw/refs/heads/main/HideeBaySellers.user.js
+// @downloadURL  https://github.com/acffordyce973/UserScripts/raw/refs/heads/main/HideeBaySellers.user.js
 // @include      /^https:\/\/www\.ebay\.(co\.uk|com)\/(itm|sch|usr)\/.*/
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=ebay.co.uk
 // @run-at       document-end
@@ -99,12 +100,30 @@ function layoutOne(sellerElements)
     var fbCount = 0;
     var frCount = 0;
     for(let i = 0; i < sellerElements.length; i++) {
-        //Regex to find the seller name
-        let seller = sellerElements[i].innerHTML.match(/^([^ ]+) .*/)[1];
-        //Regex to find the seller feedback percentage
-        let percent = sellerElements[i].innerHTML.match(/(\d+(\.\d+)?%)/)[0];
-        //Regex to find the seller feedback amount
-        let ratings = sellerElements[i].innerHTML.match(/\(([^)]+)\)/)[1];
+
+        let seller = "";
+        try{
+            //Regex to find the seller name
+            seller = sellerElements[i].innerHTML.match(/^([^ ]+) .*/)[1];
+        } catch (error) {
+            console.error("Could not find seller name - element " + i + ": " + error);
+        }
+
+        let percent = "100";
+        try{
+            //Regex to find the seller feedback percentage
+            percent = sellerElements[i].innerHTML.match(/(\d+(\.\d+)?%)/)[0];
+        } catch (error) {
+            console.error("Could not find seller percent - element " + i + ": " + error);
+        }
+
+        let ratings = "100";
+        try{
+            //Regex to find the seller feedback amount
+            ratings = sellerElements[i].innerHTML.match(/\(([^)]+)\)/)[1];
+        } catch (error) {
+            console.error("Could not find seller amount - element " + i + ": " + error);
+        }
 
         //If we have the seller's name then do
         if(seller) {
@@ -150,12 +169,30 @@ function layoutTwo(sellerElements)
     var frCount = 0;
     for(let i = 0; i < sellerElements.length; i++) {
         let primarySpans = sellerElements[i].getElementsByClassName("PRIMARY");
-        //Regex to find the seller name
-        let seller = primarySpans[0].innerText.trim();
-        //Regex to find the seller feedback percentage
-        let percent = sellerElements[i].innerHTML.match(/(\d+(\.\d+)?%)/)[0];
-        //Regex to find the seller feedback amount
-        let ratings = sellerElements[i].innerHTML.match(/\(([^)]+)\)/)[1];
+
+        let seller = "";
+        try{
+            //Regex to find the seller name
+            seller = primarySpans[0].innerText.trim();
+        } catch (error) {
+            console.error("Could not find seller name - element " + i + ": " + error);
+        }
+
+        let percent = "100";
+        try{
+            //Regex to find the seller feedback percentage
+            percent = sellerElements[i].innerHTML.match(/(\d+(\.\d+)?%)/)[0];
+        } catch (error) {
+            console.error("Could not find seller percent - element " + i + ": " + error);
+        }
+
+        let ratings = "100";
+        try{
+            //Regex to find the seller feedback amount
+            ratings = sellerElements[i].innerHTML.match(/\(([^)]+)\)/)[1];
+        } catch (error) {
+            console.error("Could not find seller amount - element " + i + ": " + error);
+        }
 
         //primarySpans[0].innerText = seller + "!";
         //If we have the seller's name then do
@@ -204,21 +241,42 @@ function layoutThree(sellerElements)
     document.getElementById("eBSBToggleButton").innerHTML="<b> Stats (Layout Three):</b><br>"
 
     for(let i = 0; i < sellerElements.length; i++) {
-        //document.getElementById("eBSBToggleButton").innerHTML+="Info: "
+        //document.getElementById("eBSBToggleButton").innerHTML+="Info: "//Debug
+
         if (!sellerElements[i].innerHTML.includes("su-styled-text primary large")) {
-            //document.getElementById("eBSBToggleButton").innerHTML+="0<br>";
+            //document.getElementById("eBSBToggleButton").innerHTML+="0<br>";//Debug
             continue;
         }
         let infoSpans = sellerElements[i].getElementsByClassName("su-styled-text");
-        //document.getElementById("eBSBToggleButton").innerHTML+=infoSpans.length + "<br>";
-        //Regex to find the seller name
-        let seller = infoSpans[0].innerText.trim();
-        //Regex to find the seller feedback percentage
-        let percent = sellerElements[i].innerHTML.match(/(\d+(\.\d+)?%)/)[0];
-        //Regex to find the seller feedback amount
-        let ratings = sellerElements[i].innerHTML.match(/\(([^)]+)\)/)[1];
 
-        //infoSpans[0].innerText = seller + "!";
+        //document.getElementById("eBSBToggleButton").innerHTML+=infoSpans.length + "<br>";//Debug
+
+        let seller = "";
+        try {
+        //Regex to find the seller name
+            seller = infoSpans[0].innerText.trim();
+        } catch (error) {
+            console.error("Could not find seller name - element " + i + ": " + error);
+        }
+
+        let percent = "100";
+        try{
+        //Regex to find the seller feedback percentage
+            percent = sellerElements[i].innerHTML.match(/(\d+(\.\d+)?%)/)[0];
+        } catch (error) {
+            console.error("Could not find seller percentage - element " + i + ": " + error);
+        }
+
+        let ratings = "100";
+        try{
+        //Regex to find the seller feedback amount
+            ratings = sellerElements[i].innerHTML.match(/\(([^)]+)\)/)[1];
+        } catch (error) {
+            console.error("Could not find seller amount - element " + i + ": " + error);
+        }
+
+        //infoSpans[0].innerText = seller + "! ";//Debug
+
         //If we have the seller's name then do
         if(seller) {
             //If seller is in the blacklist then do
