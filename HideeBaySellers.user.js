@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hide eBay Sellers
 // @namespace    https://www.ebay.co.uk/
-// @version      0.7
+// @version      0.8
 // @description  Adds a blacklist for sellers on eBay that will remove their results. Name blacklist should be comma-separated (no spaces) and supports * as a wildcard for one or more characters.
 // @author       xdpirate, ACF
 // @license      GPLv3
@@ -48,22 +48,27 @@ GM_addStyle(`
 
 //Load the user options
 let userBlacklist = GM_getValue("blacklist", []);
+let keywordBlacklist = GM_getValue("keywords", []);
 let userFeedback = GM_getValue("feedback", 80);
 let userRatings = GM_getValue("ratings", 30);
 
 //Create the settings box and load the style from above
+//Using a 1080p viewport as default cause no idea how to make it grow or shrink
 let newBox = document.createElement("div");
 newBox.innerHTML = `
 <div id="eBSBOuterDiv">
     <span id="eBSBToggleButton" title="Hide eBay Sellers"><b>Stats:</b><br>Inactive</span>
         <div id="eBSBInnerDiv" class="hidden">
-            <br><b>Hide eBay Sellers - Settings</b><br>
+            <br><b>Userscript Settings</b><br>
             Hide sellers with a feedback percentage less than:<br>
-            <input type="number" id="eBSBFeedbackPercentage" min="0" max="100" value="${userFeedback}"><br>
+            <input type="number" id="intFeedbackPercentage" min="0" max="100" value="${userFeedback}"><br>
             Hide sellers with a feedback total less than:<br>
-            <input type="number" id="eBSBFeedbackAmount" min="0" max="500" value="${userRatings}"><br>
+            <input type="number" id="intFeedbackAmount" min="0" max="500" value="${userRatings}"><br>
+            Comma-separated list of blacklisted keywords:<br>
+            <textarea id="txtKeywordBlacklist" rows="15" cols="176">${keywordBlacklist}</textarea><br>
             Comma-separated list of blacklisted sellers:<br>
-            <textarea id="eBSBBlacklistArea" rows="45" cols="264">${userBlacklist}</textarea><br>
+            <textarea id="txtUserBlacklist" rows="15" cols="176">${userBlacklist}</textarea><br>
+            <i>Star (*) is supported as a basic wildcard.</i><br>
             <input type="button" value="Save & Reload" id="eBSBSaveButton">
         <div>
     </div>
@@ -72,9 +77,10 @@ newBox.innerHTML = `
 document.body.append(newBox);
 //Handle when the user saves the options
 document.getElementById("eBSBSaveButton").onclick = function() {
-    GM_setValue("blacklist", document.getElementById("eBSBBlacklistArea").value.replace(/\s+/g, '').split(","));
-    GM_setValue("feedback", parseInt(document.getElementById("eBSBFeedbackPercentage").value));
-    GM_setValue("ratings", parseInt(document.getElementById("eBSBFeedbackAmount").value));
+    GM_setValue("blacklist", document.getElementById("txtUserBlacklist").value.replace(/\s+/g, '').split(","));
+    GM_setValue("keywords", document.getElementById("txtKeywordBlacklist").value.replace(/\s+/g, '').split(","));
+    GM_setValue("feedback", parseInt(document.getElementById("intFeedbackAmount").value));
+    GM_setValue("ratings", parseInt(document.getElementById("intFeedbackPercentage").value));
     location.reload();
 };
 //Handle when the user wants to open or close the settings
@@ -83,256 +89,135 @@ document.getElementById("eBSBToggleButton").onclick = function() {
 };
 
 function matchesRule(str, rule) {
-  var escapeRegex = (str) => str.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1");
-  return new RegExp("^" + rule.split("*").map(escapeRegex).join(".*") + "$").test(str);
+    var escapeRegex = (str) => str.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1");
+    return new RegExp("^" + rule.split("*").map(escapeRegex).join(".*") + "$").test(str);
 }
 
-function highlightSeller(sellerElement) {
-    sellerElement.style.color = "red";
-    sellerElement.style.fontWeight = "bold";
-    sellerElement.innerHTML = sellerElement.innerHTML + " (Blacklisted!)";
-}
-
-function layoutOne(sellerElements)
+function currentLayout(listingElements)
 {
-    //First half of 2025
-    var blCount = 0;
-    var fbCount = 0;
-    var frCount = 0;
-    for(let i = 0; i < sellerElements.length; i++) {
+    var countSellers = 0;
+    var countKeywords = 0
+    var countPercentages = 0;
+    var countRatings = 0;
 
-        let seller = "";
-        try{
-            //Regex to find the seller name
-            seller = sellerElements[i].innerHTML.match(/^([^ ]+) .*/)[1];
-        } catch (error) {
-            console.error("Could not find seller name - element " + i + ": " + error);
-        }
-
-        let percent = "100";
-        try{
-            //Regex to find the seller feedback percentage
-            percent = sellerElements[i].innerHTML.match(/(\d+(\.\d+)?%)/)[0];
-        } catch (error) {
-            console.error("Could not find seller percent - element " + i + ": " + error);
-        }
-
-        let ratings = "100";
-        try{
-            //Regex to find the seller feedback amount
-            ratings = sellerElements[i].innerHTML.match(/\(([^)]+)\)/)[1];
-        } catch (error) {
-            console.error("Could not find seller amount - element " + i + ": " + error);
-        }
-
-        //If we have the seller's name then do
-        if(seller) {
-            //If seller is in the blacklist then do
-            for (const blacklistedUser of userBlacklist) {
-                if (matchesRule(seller,blacklistedUser)) {
-                    //Add our hidden style
-                    sellerElements[i].closest("li.s-item").classList.add("hidden");
-                    blCount++;
+    for(let countListing = 0; countListing < listingElements.length; countListing++) {
+        //Check the listing title against our keyword blacklist
+        let listingTitleElements = listingElements[countListing].querySelector("div.s-card__title").getElementsByClassName("su-styled-text");
+        if (listingTitleElements.length > 0) {
+            let listingTitle = listingTitleElements[0].innerText.trim();
+            if (listingTitle) {
+                console.info("Checking if listing title '" + listingTitle + "' for listing " + countListing + " contains a blacklisted keyword...");
+                for (const blacklistedKeyword of keywordBlacklist) {
+                    if (matchesRule(listingTitle.toLowerCase(), blacklistedKeyword.toLowerCase())) {
+                        //Add our hidden style
+                        listingElements[countListing].classList.add("hidden");
+                        countKeywords++;
+                        console.info("Hiding listing due to title match of " + blacklistedKeyword + "...")
+                        //Bail from this for loop
+                        break;
+                    }
                 }
             }
         }
-        //If we have the feedback percent then do
-        if (percent) {
-            let feedback = parseFloat(percent);
-            //If feedback is low then do
-            if (feedback < userFeedback) {
-                //Add our hidden style
-                sellerElements[i].closest("li.s-item").classList.add("hidden");
-                fbCount++;
-            }
-        }
 
-        //If we have the feedback amount then do
-        if (ratings) {
-            //If amount is low then do
-            if (ratings < userRatings) {
-                //Add our hidden style
-                sellerElements[i].closest("li.s-item").classList.add("hidden");
-                frCount++;
+        //Get the price, listing type/bids, delivery, country (sometimes), datetime, and seller information
+        let listingInfoElements = listingElements[countListing].querySelectorAll("div.s-card__attribute-row");
+        console.info("Found " + listingInfoElements.length + " info elements for listing " + countListing + ":");
+        console.info(listingInfoElements);
+        //Check the seller information against our seller blacklist and ratings
+        for(let countInfoElement = 0; countInfoElement < listingInfoElements.length; countInfoElement++) {
+            //Bail if we can't find our style
+            if (!listingInfoElements[countInfoElement].innerHTML.includes("su-styled-text primary large")) {
+                //console.info("Couldn't find our style in seller element " + countInfoElement + "...");
+                continue;
+            }
+            let infoSpans = listingInfoElements[countInfoElement].getElementsByClassName("su-styled-text");
+
+            let seller = "";
+            try {
+                //Regex to find the seller name if in this element
+                seller = infoSpans[0].innerText.trim();
+            } catch (error) {
+                console.error("Could not find seller name - element " + countInfoElement + ": " + error);
+            }
+
+            let percent = "100";
+            try{
+                //Regex to find the seller feedback percentage if in this element
+                percent = listingInfoElements[countInfoElement].innerHTML.match(/(\d+(\.\d+)?%)/)[0];
+            } catch (error) {
+                console.error("Could not find seller percentage - element " + countInfoElement + ": " + error);
+            }
+
+            let ratings = "100";
+            try{
+                //Regex to find the seller feedback amount if in this element
+                ratings = listingInfoElements[countInfoElement].innerHTML.match(/\(([^)]+)\)/)[1];
+            } catch (error) {
+                console.error("Could not find seller amount - element " + countInfoElement + ": " + error);
+            }
+
+            //infoSpans[0].innerText = seller + "! ";//Debug to add an exclamation next to seller name
+
+            //If we have the seller's name then do
+            if(seller) {
+                //If seller is in the blacklist then do
+                for (const blacklistedUser of userBlacklist) {
+                    if (matchesRule(seller, blacklistedUser)) {
+                        //Add our hidden style
+                        listingElements[countListing].classList.add("hidden");
+                        countSellers++;
+                        console.info("Hiding listing due to seller name match of " + seller + "...")
+                        //Bail from this loop and the seller element loop
+                        countInfoElement = listingInfoElements.length;
+                        break;
+                    }
+                }
+            }
+            //If we have the feedback percent then do
+            if (percent) {
+                let feedback = parseFloat(percent);
+                //If feedback is low then do
+                if (feedback < userFeedback) {
+                    //Add our hidden style
+                    listingElements[countListing].classList.add("hidden");
+                    countPercentages++;
+                    console.info("Hiding listing due to low percentage match of " + feedback + "...")
+                    //Bail from the seller element loop
+                    countInfoElement = listingInfoElements.length;
+                }
+            }
+
+            //If we have the feedback amount then do
+            if (ratings) {
+                //If amount is low then do
+                if (ratings < userRatings) {
+                    //Add our hidden style
+                    listingElements[countListing].classList.add("hidden");
+                    countRatings++;
+                    console.info("Hiding listing due to low rating match of " + ratings + "...")
+                    //Bail from the seller element loop
+                    countInfoElement = listingInfoElements.length;
+                }
             }
         }
     }
 
-    document.getElementById("eBSBToggleButton").innerHTML="<b>Stats (Layout One):</b><br>" + blCount + " Blacklisted<br>" + fbCount + " Low Feedback<br>" + frCount + " Low Ratings";
-}
-
-function layoutTwo(sellerElements)
-{
-    //Second half of 2025
-    var blCount = 0;
-    var fbCount = 0;
-    var frCount = 0;
-    for(let i = 0; i < sellerElements.length; i++) {
-        let primarySpans = sellerElements[i].getElementsByClassName("PRIMARY");
-
-        let seller = "";
-        try{
-            //Regex to find the seller name
-            seller = primarySpans[0].innerText.trim();
-        } catch (error) {
-            console.error("Could not find seller name - element " + i + ": " + error);
-        }
-
-        let percent = "100";
-        try{
-            //Regex to find the seller feedback percentage
-            percent = sellerElements[i].innerHTML.match(/(\d+(\.\d+)?%)/)[0];
-        } catch (error) {
-            console.error("Could not find seller percent - element " + i + ": " + error);
-        }
-
-        let ratings = "100";
-        try{
-            //Regex to find the seller feedback amount
-            ratings = sellerElements[i].innerHTML.match(/\(([^)]+)\)/)[1];
-        } catch (error) {
-            console.error("Could not find seller amount - element " + i + ": " + error);
-        }
-
-        //primarySpans[0].innerText = seller + "!";
-        //If we have the seller's name then do
-        if(seller) {
-            //If seller is in the blacklist then do
-            for (const blacklistedUser of userBlacklist) {
-                if (matchesRule(seller,blacklistedUser)) {
-                    //Add our hidden style
-                    sellerElements[i].closest("li.s-item").classList.add("hidden");
-                    blCount++;
-                }
-            }
-        }
-        //If we have the feedback percent then do
-        if (percent) {
-            let feedback = parseFloat(percent);
-            //If feedback is low then do
-            if (feedback < userFeedback) {
-                //Add our hidden style
-                sellerElements[i].closest("li.s-item").classList.add("hidden");
-                fbCount++;
-            }
-        }
-
-        //If we have the feedback amount then do
-        if (ratings) {
-            //If amount is low then do
-            if (ratings < userRatings) {
-                //Add our hidden style
-                sellerElements[i].closest("li.s-item").classList.add("hidden");
-                frCount++;
-            }
-        }
-    }
-
-    document.getElementById("eBSBToggleButton").innerHTML="<b> Stats (Layout Two):</b><br>" + blCount + " Blacklisted<br>" + fbCount + " Low Feedback<br>" + frCount + " Low Ratings";
-}
-
-function layoutThree(sellerElements)
-{
-    //Second half of 2025 - some card layout
-    var blCount = 0;
-    var fbCount = 0;
-    var frCount = 0;
-
-    document.getElementById("eBSBToggleButton").innerHTML="<b> Stats (Layout Three):</b><br>"
-
-    for(let i = 0; i < sellerElements.length; i++) {
-        //document.getElementById("eBSBToggleButton").innerHTML+="Info: "//Debug
-
-        if (!sellerElements[i].innerHTML.includes("su-styled-text primary large")) {
-            //document.getElementById("eBSBToggleButton").innerHTML+="0<br>";//Debug
-            continue;
-        }
-        let infoSpans = sellerElements[i].getElementsByClassName("su-styled-text");
-
-        //document.getElementById("eBSBToggleButton").innerHTML+=infoSpans.length + "<br>";//Debug
-
-        let seller = "";
-        try {
-        //Regex to find the seller name
-            seller = infoSpans[0].innerText.trim();
-        } catch (error) {
-            console.error("Could not find seller name - element " + i + ": " + error);
-        }
-
-        let percent = "100";
-        try{
-        //Regex to find the seller feedback percentage
-            percent = sellerElements[i].innerHTML.match(/(\d+(\.\d+)?%)/)[0];
-        } catch (error) {
-            console.error("Could not find seller percentage - element " + i + ": " + error);
-        }
-
-        let ratings = "100";
-        try{
-        //Regex to find the seller feedback amount
-            ratings = sellerElements[i].innerHTML.match(/\(([^)]+)\)/)[1];
-        } catch (error) {
-            console.error("Could not find seller amount - element " + i + ": " + error);
-        }
-
-        //infoSpans[0].innerText = seller + "! ";//Debug
-
-        //If we have the seller's name then do
-        if(seller) {
-            //If seller is in the blacklist then do
-            for (const blacklistedUser of userBlacklist) {
-                if (matchesRule(seller,blacklistedUser)) {
-                    //Add our hidden style
-                    sellerElements[i].closest("li.s-card").classList.add("hidden");
-                    blCount++;
-                }
-            }
-        }
-        //If we have the feedback percent then do
-        if (percent) {
-            let feedback = parseFloat(percent);
-            //If feedback is low then do
-            if (feedback < userFeedback) {
-                //Add our hidden style
-                sellerElements[i].closest("li.s-card").classList.add("hidden");
-                fbCount++;
-            }
-        }
-
-        //If we have the feedback amount then do
-        if (ratings) {
-            //If amount is low then do
-            if (ratings < userRatings) {
-                //Add our hidden style
-                sellerElements[i].closest("li.s-card").classList.add("hidden");
-                frCount++;
-            }
-        }
-    }
-
-    document.getElementById("eBSBToggleButton").innerHTML="<b> Stats (Layout Three):</b><br>" + blCount + " Blacklisted<br>" + fbCount + " Low Feedback<br>" + frCount + " Low Ratings";
+    document.getElementById("eBSBToggleButton").innerHTML="<b>Hide Stats:</b><br>" + countSellers + " Seller Name<br>" + countKeywords + " Title Keyword<br>" + countPercentages + " Low Feedback<br>" + countRatings + " Low Ratings";
 }
 
 //Do on the search page
 if(window.location.href.includes("/sch/")) {
-    //Use the class that holds the seller name to find each eBay listing in the results
-    let oneElements = document.querySelectorAll("span.s-item__seller-info-text");
-    let twoElements = document.querySelectorAll("span.s-item__etrs-text");
-    let threeElements = document.querySelectorAll("div.s-card__attribute-row");
-
-    document.getElementById("eBSBToggleButton").innerHTML="Layout One: " + oneElements.length + "<br>Layout Two: " + twoElements.length + "<br>Layout Three: " + threeElements.length;
+    //Use the class that holds each listing
+    //let oneElements = document.querySelectorAll("span.s-item__seller-info-text");
+    //let twoElements = document.querySelectorAll("span.s-item__etrs-text");
+    //let threeElements = document.querySelectorAll("div.s-card__attribute-row");
+    let listingElements = document.querySelectorAll("li.s-card");
+    console.info("Found " + listingElements.length + " item listings...");
 
     //If there are listings then do
-    if(oneElements.length > 0)
+    if(listingElements.length > 0)
     {
-        layoutOne(oneElements);
-    }
-    else if (twoElements.length > 0)
-    {
-        layoutTwo(twoElements);
-    }
-    else if (threeElements.length > 0)
-    {
-        layoutThree(threeElements);
+        currentLayout(listingElements);
     }
 }
