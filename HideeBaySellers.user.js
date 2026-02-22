@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hide eBay Sellers
 // @namespace    https://www.ebay.co.uk/
-// @version      0.8
+// @version      0.8.1
 // @description  Adds a blacklist for sellers on eBay that will remove their results. Name blacklist should be comma-separated (no spaces) and supports * as a wildcard for one or more characters.
 // @author       xdpirate, ACF
 // @license      GPLv3
@@ -78,7 +78,7 @@ document.body.append(newBox);
 //Handle when the user saves the options
 document.getElementById("eBSBSaveButton").onclick = function() {
     GM_setValue("blacklist", document.getElementById("txtUserBlacklist").value.replace(/\s+/g, '').split(","));
-    GM_setValue("keywords", document.getElementById("txtKeywordBlacklist").value.replace(/\s+/g, '').split(","));
+    GM_setValue("keywords", document.getElementById("txtKeywordBlacklist").value.split(","));
     GM_setValue("feedback", parseInt(document.getElementById("intFeedbackAmount").value));
     GM_setValue("ratings", parseInt(document.getElementById("intFeedbackPercentage").value));
     location.reload();
