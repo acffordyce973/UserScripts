@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hide eBay Sellers
 // @namespace    https://www.ebay.co.uk/
-// @version      0.8.1
+// @version      0.8.2
 // @description  Adds a blacklist for sellers on eBay that will remove their results. Name blacklist should be comma-separated (no spaces) and supports * as a wildcard for one or more characters.
 // @author       xdpirate, ACF
 // @license      GPLv3
@@ -100,7 +100,10 @@ function currentLayout(listingElements)
     var countPercentages = 0;
     var countRatings = 0;
 
+    //Loop through each listing
     for(let countListing = 0; countListing < listingElements.length; countListing++) {
+        let listingHidden = false;
+        
         //Check the listing title against our keyword blacklist
         let listingTitleElements = listingElements[countListing].querySelector("div.s-card__title").getElementsByClassName("su-styled-text");
         if (listingTitleElements.length > 0) {
@@ -111,6 +114,7 @@ function currentLayout(listingElements)
                     if (matchesRule(listingTitle.toLowerCase(), blacklistedKeyword.toLowerCase())) {
                         //Add our hidden style
                         listingElements[countListing].classList.add("hidden");
+                        listingHidden = true;
                         countKeywords++;
                         console.info("Hiding listing due to title match of " + blacklistedKeyword + "...")
                         //Bail from this for loop
@@ -120,10 +124,14 @@ function currentLayout(listingElements)
             }
         }
 
+        //If we've hidden this listing based on the checks above then move to the next
+        if (listingHidden) { continue; }
+
         //Get the price, listing type/bids, delivery, country (sometimes), datetime, and seller information
         let listingInfoElements = listingElements[countListing].querySelectorAll("div.s-card__attribute-row");
         console.info("Found " + listingInfoElements.length + " info elements for listing " + countListing + ":");
-        console.info(listingInfoElements);
+        //console.info(listingInfoElements);
+
         //Check the seller information against our seller blacklist and ratings
         for(let countInfoElement = 0; countInfoElement < listingInfoElements.length; countInfoElement++) {
             //Bail if we can't find our style
@@ -135,7 +143,7 @@ function currentLayout(listingElements)
 
             let seller = "";
             try {
-                //Regex to find the seller name if in this element
+                //Seller should be the first element
                 seller = infoSpans[0].innerText.trim();
             } catch (error) {
                 console.error("Could not find seller name - element " + countInfoElement + ": " + error);
@@ -167,13 +175,19 @@ function currentLayout(listingElements)
                         //Add our hidden style
                         listingElements[countListing].classList.add("hidden");
                         countSellers++;
+                        listingHidden = true;
                         console.info("Hiding listing due to seller name match of " + seller + "...")
-                        //Bail from this loop and the seller element loop
-                        countInfoElement = listingInfoElements.length;
+                        //Bail from the info elements loop after exiting this one
+                        listingHidden = true;
+                        //Bail from this blacklisted seller loop
                         break;
                     }
                 }
             }
+
+            //Bail from the info element loop if we've found a match above
+            if (listingHidden) { break; }
+
             //If we have the feedback percent then do
             if (percent) {
                 let feedback = parseFloat(percent);
@@ -182,9 +196,10 @@ function currentLayout(listingElements)
                     //Add our hidden style
                     listingElements[countListing].classList.add("hidden");
                     countPercentages++;
+                    listingHidden = true;
                     console.info("Hiding listing due to low percentage match of " + feedback + "...")
-                    //Bail from the seller element loop
-                    countInfoElement = listingInfoElements.length;
+                    //Bail from the info elements loop
+                    break;
                 }
             }
 
@@ -196,8 +211,8 @@ function currentLayout(listingElements)
                     listingElements[countListing].classList.add("hidden");
                     countRatings++;
                     console.info("Hiding listing due to low rating match of " + ratings + "...")
-                    //Bail from the seller element loop
-                    countInfoElement = listingInfoElements.length;
+                    //Bail from the info elements loop
+                    break;
                 }
             }
         }
