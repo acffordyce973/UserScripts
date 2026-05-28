@@ -1,119 +1,73 @@
 // ==UserScript==
-// @name         Send to qBittorrent
-// @namespace    acf.me.uk
-// @description  Send torrents to qBittorrent via the right click context menu. TamperMonkey only!
-// @author       ACF, MSerj
-// @version      0.3
-// @downloadURL  https://github.com/acffordyce973/UserScripts/raw/refs/heads/main/SendtoqBittorrent.user.js
-// @updateURL    https://github.com/acffordyce973/UserScripts/raw/refs/heads/main/SendtoqBittorrent.user.js
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=qbittorrent.org
-// @include      *
-// @grant        GM_registerMenuCommand
-// @grant        GM_notification
-// @grant        GM_setValue
-// @grant        GM_getValue
-// @grant        GM_xmlhttpRequest
-// @run-at       document-start
+// @name			Send to qBittorrent
+// @namespace		acf.me.uk
+// @description		Send torrents to qBittorrent via the right click context menu. TamperMonkey and API Key only!
+// @author			ACF, MSerj
+// @version			0.6
+// @downloadURL		https://github.com/acffordyce973/UserScripts/raw/refs/heads/main/SendtoqBittorrent.user.js
+// @updateURL		https://github.com/acffordyce973/UserScripts/raw/refs/heads/main/SendtoqBittorrent.user.js
+// @icon			https://www.google.com/s2/favicons?sz=64&domain=qbittorrent.org
+// @include			*
+// @grant			GM_registerMenuCommand
+// @grant			GM_notification
+// @grant			GM_setValue
+// @grant			GM_getValue
+// @grant			GM_xmlhttpRequest
+// @run-at			document-start
 // ==/UserScript==
 
-// Set up the qBittorrent configuration prompts
 async function setUpQBittorrentSettings() {
-    const qBittorrentUrl = prompt("Enter qBittorrent WEB UI address:", GM_getValue("qBittorrentUrl", ""));
-    const username = prompt("Enter qBittorrent WEB UI username:", GM_getValue("username", ""));
-    const password = prompt("Enter qBittorrent WEB UI password:", GM_getValue("password", ""));
-    const categories = prompt("Enter comma separated categories:", GM_getValue("categories", []));
-
-    GM_setValue("qBittorrentUrl", qBittorrentUrl);
-    GM_setValue("username", username);
-    GM_setValue("password", password);
-    GM_setValue("categories", categories.replace(/\s+/g, '').split(","));
-    alert("qBittorrent settings saved.");
+	let strUrl = prompt("Enter qBittorrent WEB UI address and port (e.g. http://192.168.1.50:8080):", GM_getValue("url", "")) || "";
+	if (strUrl && !strUrl.startsWith("http")) strUrl = "http://" + strUrl;
+	GM_setValue("url", strUrl);
+	GM_setValue("apiKey", prompt("Enter qBittorrent API Key (e.g. qbt_...):", GM_getValue("apiKey", "")) || "");
+	GM_setValue("categories", (prompt("Enter comma separated categories (e.g. music,videos):", GM_getValue("categories", [])) || "").replace(/\s+/g, '').split(","));
+	alert("qBittorrent settings saved.");
 }
 
-// Function to send download link to qBittorrent WEB UI
-function sendToQBittorrent(downloadUrl, category) {
-    const qBittorrentUrl = GM_getValue("qBittorrentUrl");
-    const username = GM_getValue("username");
-    const password = GM_getValue("password");
+function sendToQBittorrent(strDownloadUrl, strCategory) {
+	let strUrl = GM_getValue("url");
+	const strApiKey = GM_getValue("apiKey");
 
-    if (!qBittorrentUrl || !username || !password) {
-        alert("Please configure your qBittorrent settings first.");
-        setUpQBittorrentSettings();
-        return;
-    }
+	if (!strUrl || !strApiKey) {
+		alert("Please configure your qBittorrent settings first.");
+		setUpQBittorrentSettings();
+		return;
+	}
 
-    // Authenticate with QNAP to get a session token
-    GM_xmlhttpRequest({
-        method: "POST",
-        url: `${qBittorrentUrl}/api/v2/auth/login`,
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded"
-        },
-        data: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
-        onload: function(response) {
-            if (response.status === 200 && response.responseText === "Ok.") {
-                GM_xmlhttpRequest({
-                    method: "POST",
-                    url: `${qBittorrentUrl}/api/v2/torrents/add`,
-                    headers: {
-                        "Content-Type": "application/x-www-form-urlencoded",
-                    },
-                    data: `urls=${encodeURIComponent(downloadUrl)}&category=${category}`,
-                    onload: function(response) {
-                        if (response.status === 200) {
-                            if (category == "") { category="Default"; }
-                            GM_notification({text: downloadUrl, title: `Torrent Added to ${category}`, url: qBittorrentUrl, onclick: (event) =>
-                                {
-                                    console.log("Notification was clicked.");
-                                },
-                            });
-                        } else {
-                            alert(`Failed to add torrent: ${response.responseText}`);
-                        }
-                    },
-                    onerror: function(error) {
-                        console.error(error)
-                        alert(`Add torrent request failed: ${error}`);
-                    }
-                });
-            } else {
-                console.warn(response)
-                alert("Failed to authenticate in qBittorrent. Please check your credentials.");
-            }
-        },
-        onerror: function(error) {
-            console.error(error)
-            alert("Error connecting to qBittorrent for authentication.");
-        }
-    });
+	if (!strUrl.startsWith("http")) strUrl = "http://" + strUrl;
+
+	GM_xmlhttpRequest({
+		method: "POST",
+		url: `${strUrl}/api/v2/torrents/add`,
+		headers: {
+			"Content-Type": "application/x-www-form-urlencoded",
+			"Authorization": `Bearer ${strApiKey}`
+		},
+		data: `urls=${encodeURIComponent(strDownloadUrl)}&category=${strCategory}`,
+		onload: (objResponse) => {
+			if (objResponse.status >= 200 && objResponse.status < 300) {
+				if (strCategory == "") strCategory = "Default";
+				GM_notification({text: strDownloadUrl, title: `Torrent Added to ${strCategory}`, url: strUrl, onclick: (objEvent) => console.log("Notification was clicked.")});
+			} else {
+				alert(`Failed to add torrent. HTTP ${objResponse.status}: ${objResponse.statusText || objResponse.responseText}`);
+			}
+		},
+		onerror: (objError) => {
+			console.error("qBittorrent Request Error:", objError);
+			alert("Add torrent request failed. Check the browser console for more details.");
+		}
+	});
 }
 
-let clickedEl = null;
+let objClickedEl = null;
 
-document.addEventListener("contextmenu", function(event) {
-    clickedEl = event.target;
-});
+document.addEventListener("contextmenu", (objEvent) => objClickedEl = objEvent.target);
 
-GM_registerMenuCommand("Default Download", () => {
-    if (clickedEl) {
-        console.log(`the clicked element is :`)
-        console.log(clickedEl)
-        const target = clickedEl.closest("a");
-        sendToQBittorrent(target.href, "");
-    }
-});
+GM_registerMenuCommand("Default Download", () => { if (objClickedEl) sendToQBittorrent(objClickedEl.closest("a").href, ""); });
 
-let categories = GM_getValue("categories", []);
-for (const category of categories) {
-    GM_registerMenuCommand(category + " Download", () => {
-        if (clickedEl) {
-            console.log(`the clicked element is :`)
-            console.log(clickedEl)
-            const target = clickedEl.closest("a");
-            sendToQBittorrent(target.href, category);
-        }
-    });
+for (const strCategory of GM_getValue("categories", [])) {
+	GM_registerMenuCommand(strCategory + " Download", () => { if (objClickedEl) sendToQBittorrent(objClickedEl.closest("a").href, strCategory); });
 }
 
-// Menu command to configure qBittorrent settings
 GM_registerMenuCommand("Configure qBittorrent Settings", setUpQBittorrentSettings);
