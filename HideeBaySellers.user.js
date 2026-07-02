@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Hide eBay Sellers
 // @namespace    https://www.ebay.co.uk/
-// @version      0.8.2
+// @version      0.9.0
 // @description  Adds a blacklist for sellers on eBay that will remove their results. Name blacklist should be comma-separated (no spaces) and supports * as a wildcard for one or more characters.
-// @author       xdpirate, ACF
+// @author       ACF
 // @license      GPLv3
 // @updateURL    https://github.com/acffordyce973/UserScripts/raw/refs/heads/main/HideeBaySellers.user.js
 // @downloadURL  https://github.com/acffordyce973/UserScripts/raw/refs/heads/main/HideeBaySellers.user.js
@@ -15,224 +15,171 @@
 // @grant        GM_addStyle
 // ==/UserScript==
 
-//Styles the box for the user to enter their blacklisted sellers
 GM_addStyle(`
-    #eBSBToggleButton {
-        cursor: pointer;
-    }
+	#eBSBToggleButton {
+		cursor: pointer;
+	}
 
-    #eBSBBlacklistArea {
-        background-color: black;
-        color: white;
-        font-family: monospace;
-    }
+	#eBSBBlacklistArea {
+		background-color: black;
+		color: white;
+		font-family: monospace;
+	}
 
-    #eBSBOuterDiv {
-        float: left;
-        background-color: black;
-        color: white;
-        padding: 5px;
-        border: 1px solid white;
-        border-radius: 10px;
-        z-index: 2147483647;
-        display: block;
-        position: absolute;
-        top: 5px;
-        left: 5px;
-    }
+	#eBSBOuterDiv {
+		float: left;
+		background-color: black;
+		color: white;
+		padding: 5px;
+		border: 1px solid white;
+		border-radius: 10px;
+		z-index: 2147483647;
+		display: block;
+		position: absolute;
+		top: 5px;
+		left: 5px;
+	}
 
-    .hidden {
-        display: none;
-    }
+	.hidden {
+		display: none;
+	}
 `);
 
-//Load the user options
-let userBlacklist = GM_getValue("blacklist", []);
-let keywordBlacklist = GM_getValue("keywords", []);
-let userFeedback = GM_getValue("feedback", 80);
-let userRatings = GM_getValue("ratings", 30);
+let arrUserBlacklist = GM_getValue("blacklist", []);
+let arrKeywordBlacklist = GM_getValue("keywords", []);
+let intUserFeedback = GM_getValue("feedback", 80);
+let intUserRatings = GM_getValue("ratings", 30);
 
-//Create the settings box and load the style from above
-//Using a 1080p viewport as default cause no idea how to make it grow or shrink
-let newBox = document.createElement("div");
-newBox.innerHTML = `
+let nodeNewBox = document.createElement("div");
+nodeNewBox.innerHTML = `
 <div id="eBSBOuterDiv">
-    <span id="eBSBToggleButton" title="Hide eBay Sellers"><b>Stats:</b><br>Inactive</span>
-        <div id="eBSBInnerDiv" class="hidden">
-            <br><b>Userscript Settings</b><br>
-            Hide sellers with a feedback percentage less than:<br>
-            <input type="number" id="intFeedbackPercentage" min="0" max="100" value="${userFeedback}"><br>
-            Hide sellers with a feedback total less than:<br>
-            <input type="number" id="intFeedbackAmount" min="0" max="500" value="${userRatings}"><br>
-            Comma-separated list of blacklisted keywords:<br>
-            <textarea id="txtKeywordBlacklist" rows="15" cols="176">${keywordBlacklist}</textarea><br>
-            Comma-separated list of blacklisted sellers:<br>
-            <textarea id="txtUserBlacklist" rows="15" cols="176">${userBlacklist}</textarea><br>
-            <i>Star (*) is supported as a basic wildcard.</i><br>
-            <input type="button" value="Save & Reload" id="eBSBSaveButton">
-        <div>
-    </div>
+	<span id="eBSBToggleButton" title="Hide eBay Sellers"><b>Stats:</b><br>Inactive</span>
+		<div id="eBSBInnerDiv" class="hidden">
+			<br><b>Userscript Settings</b><br>
+			Hide sellers with a feedback percentage less than:<br>
+			<input type="number" id="intFeedbackPercentage" min="0" max="100" value="${intUserFeedback}"><br>
+			Hide sellers with a feedback total less than:<br>
+			<input type="number" id="intFeedbackAmount" min="0" max="500" value="${intUserRatings}"><br>
+			Comma-separated list of blacklisted keywords:<br>
+			<textarea id="txtKeywordBlacklist" rows="15" cols="176">${arrKeywordBlacklist}</textarea><br>
+			Comma-separated list of blacklisted sellers:<br>
+			<textarea id="txtUserBlacklist" rows="15" cols="176">${arrUserBlacklist}</textarea><br>
+			<i>Star (*) is supported as a basic wildcard.</i><br>
+			<input type="button" value="Save & Reload" id="eBSBSaveButton">
+		<div>
+	</div>
 `;
-//Add the box to the start of the page
-document.body.append(newBox);
-//Handle when the user saves the options
+document.body.append(nodeNewBox);
+
 document.getElementById("eBSBSaveButton").onclick = function() {
-    GM_setValue("blacklist", document.getElementById("txtUserBlacklist").value.replace(/\s+/g, '').split(","));
-    GM_setValue("keywords", document.getElementById("txtKeywordBlacklist").value.split(","));
-    GM_setValue("feedback", parseInt(document.getElementById("intFeedbackAmount").value));
-    GM_setValue("ratings", parseInt(document.getElementById("intFeedbackPercentage").value));
-    location.reload();
+	GM_setValue("blacklist", document.getElementById("txtUserBlacklist").value.replace(/\s+/g, '').split(","));
+	GM_setValue("keywords", document.getElementById("txtKeywordBlacklist").value.split(","));
+	GM_setValue("feedback", parseInt(document.getElementById("intFeedbackPercentage").value));
+	GM_setValue("ratings", parseInt(document.getElementById("intFeedbackAmount").value));
+	location.reload();
 };
-//Handle when the user wants to open or close the settings
+
 document.getElementById("eBSBToggleButton").onclick = function() {
-    document.getElementById('eBSBInnerDiv').classList.toggle('hidden');
+	document.getElementById('eBSBInnerDiv').classList.toggle('hidden');
 };
 
-function matchesRule(str, rule) {
-    var escapeRegex = (str) => str.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1");
-    return new RegExp("^" + rule.split("*").map(escapeRegex).join(".*") + "$").test(str);
+function matchesRule(strString, strRule) { return new RegExp("^" + strRule.split("*").map((strMatch) => strMatch.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1")).join(".*") + "$").test(strString); }
+
+function currentLayout(nodeListElements, strTitleSelector, strTitleClass, strInfoSelector) {
+	let intCountSellers = 0;
+	let intCountKeywords = 0;
+	let intCountPercentages = 0;
+	let intCountRatings = 0;
+
+	for(let intCountListing = 0; intCountListing < nodeListElements.length; intCountListing++) {
+		let boolListingHidden = false;
+
+		try {
+			let nodeListTitleElements = nodeListElements[intCountListing].querySelector(strTitleSelector).getElementsByClassName(strTitleClass);
+			if (nodeListTitleElements.length > 0 && nodeListTitleElements[0].innerText.trim()) {
+				console.info("Checking if listing title '" + nodeListTitleElements[0].innerText.trim() + "' for listing " + intCountListing + " contains a blacklisted keyword...");
+				for (const strBlacklistedKeyword of arrKeywordBlacklist) {
+					if (matchesRule(nodeListTitleElements[0].innerText.trim().toLowerCase(), strBlacklistedKeyword.toLowerCase())) {
+						nodeListElements[intCountListing].classList.add("hidden");
+						boolListingHidden = true;
+						intCountKeywords++;
+						console.info("Hiding listing due to title match of " + strBlacklistedKeyword + "...");
+						break;
+					}
+				}
+			}
+		} catch (error) { console.error("Could not find title - listing " + intCountListing + ": " + error); }
+
+		if (boolListingHidden) continue;
+
+		let nodeListInfoElements = nodeListElements[intCountListing].querySelectorAll(strInfoSelector);
+
+		for(let intCountInfoElement = 0; intCountInfoElement < nodeListInfoElements.length; intCountInfoElement++) {
+			if (!nodeListInfoElements[intCountInfoElement].innerHTML.includes("su-styled-text")) continue;
+
+			let nodeInfoSpans = nodeListInfoElements[intCountInfoElement].getElementsByClassName("su-styled-text");
+			console.info("Found " + nodeInfoSpans.length + " info spans for listing " + intCountListing + ":");
+
+			let strSeller = "";
+			let strPercent = "100";
+			let strRatings = "100";
+
+			for(let intCountInfoSpan = 0; intCountInfoSpan < nodeInfoSpans.length; intCountInfoSpan++) {
+				let strSpanText = nodeInfoSpans[intCountInfoSpan].textContent;
+
+				if (!strSpanText.includes("%") || !strSpanText.includes("(") || !strSpanText.includes(")")) continue;
+
+				try { strPercent = strSpanText.match(/(\d+(\.\d+)?%)/)[0]; } catch (error) { console.error("Could not find seller percentage - span " + intCountInfoSpan + ": " + error); }
+				try { strRatings = strSpanText.match(/\(([^)]+)\)/)[1]; } catch (error) { console.error("Could not find seller amount - span " + intCountInfoSpan + ": " + error); }
+				try { strSeller = strSpanText.split(" ")[0]; } catch (error) { console.error("Could not find seller name - span " + intCountInfoSpan + ": " + error); }
+			}
+
+			if(strSeller) {
+				for (const strBlacklistedUser of arrUserBlacklist) {
+					if (matchesRule(strSeller, strBlacklistedUser)) {
+						nodeListElements[intCountListing].classList.add("hidden");
+						intCountSellers++;
+						boolListingHidden = true;
+						console.info("Hiding listing due to seller name match of " + strSeller + "...");
+						break;
+					}
+				}
+			}
+
+			if (boolListingHidden) break;
+
+			if (strPercent && parseFloat(strPercent) < intUserFeedback) {
+				nodeListElements[intCountListing].classList.add("hidden");
+				intCountPercentages++;
+				boolListingHidden = true;
+				console.info("Hiding listing due to low percentage match of " + parseFloat(strPercent) + "...");
+				break;
+			}
+
+			if (strRatings) {
+				let intParsedRatings = strRatings.includes('K') ? parseFloat(strRatings) * 1000 : parseInt(strRatings);
+				if (intParsedRatings < intUserRatings) {
+					nodeListElements[intCountListing].classList.add("hidden");
+					intCountRatings++;
+					console.info("Hiding listing due to low rating match of " + strRatings + "...");
+					break;
+				}
+			}
+		}
+	}
+
+	document.getElementById("eBSBToggleButton").innerHTML="<b>Hide Stats:</b><br>" + intCountSellers + " Seller Name<br>" + intCountKeywords + " Title Keyword<br>" + intCountPercentages + " Low Feedback<br>" + intCountRatings + " Low Ratings";
 }
 
-function currentLayout(listingElements)
-{
-    var countSellers = 0;
-    var countKeywords = 0
-    var countPercentages = 0;
-    var countRatings = 0;
-
-    //Loop through each listing
-    for(let countListing = 0; countListing < listingElements.length; countListing++) {
-        let listingHidden = false;
-        
-        //Check the listing title against our keyword blacklist
-        let listingTitleElements = listingElements[countListing].querySelector("div.s-card__title").getElementsByClassName("su-styled-text");
-        if (listingTitleElements.length > 0) {
-            let listingTitle = listingTitleElements[0].innerText.trim();
-            if (listingTitle) {
-                console.info("Checking if listing title '" + listingTitle + "' for listing " + countListing + " contains a blacklisted keyword...");
-                for (const blacklistedKeyword of keywordBlacklist) {
-                    if (matchesRule(listingTitle.toLowerCase(), blacklistedKeyword.toLowerCase())) {
-                        //Add our hidden style
-                        listingElements[countListing].classList.add("hidden");
-                        listingHidden = true;
-                        countKeywords++;
-                        console.info("Hiding listing due to title match of " + blacklistedKeyword + "...")
-                        //Bail from this for loop
-                        break;
-                    }
-                }
-            }
-        }
-
-        //If we've hidden this listing based on the checks above then move to the next
-        if (listingHidden) { continue; }
-
-        //Get the price, listing type/bids, delivery, country (sometimes), datetime, and seller information
-        let listingInfoElements = listingElements[countListing].querySelectorAll("div.s-card__attribute-row");
-        console.info("Found " + listingInfoElements.length + " info elements for listing " + countListing + ":");
-        //console.info(listingInfoElements);
-
-        //Check the seller information against our seller blacklist and ratings
-        for(let countInfoElement = 0; countInfoElement < listingInfoElements.length; countInfoElement++) {
-            //Bail if we can't find our style
-            if (!listingInfoElements[countInfoElement].innerHTML.includes("su-styled-text primary large")) {
-                //console.info("Couldn't find our style in seller element " + countInfoElement + "...");
-                continue;
-            }
-            let infoSpans = listingInfoElements[countInfoElement].getElementsByClassName("su-styled-text");
-
-            let seller = "";
-            try {
-                //Seller should be the first element
-                seller = infoSpans[0].innerText.trim();
-            } catch (error) {
-                console.error("Could not find seller name - element " + countInfoElement + ": " + error);
-            }
-
-            let percent = "100";
-            try{
-                //Regex to find the seller feedback percentage if in this element
-                percent = listingInfoElements[countInfoElement].innerHTML.match(/(\d+(\.\d+)?%)/)[0];
-            } catch (error) {
-                console.error("Could not find seller percentage - element " + countInfoElement + ": " + error);
-            }
-
-            let ratings = "100";
-            try{
-                //Regex to find the seller feedback amount if in this element
-                ratings = listingInfoElements[countInfoElement].innerHTML.match(/\(([^)]+)\)/)[1];
-            } catch (error) {
-                console.error("Could not find seller amount - element " + countInfoElement + ": " + error);
-            }
-
-            //infoSpans[0].innerText = seller + "! ";//Debug to add an exclamation next to seller name
-
-            //If we have the seller's name then do
-            if(seller) {
-                //If seller is in the blacklist then do
-                for (const blacklistedUser of userBlacklist) {
-                    if (matchesRule(seller, blacklistedUser)) {
-                        //Add our hidden style
-                        listingElements[countListing].classList.add("hidden");
-                        countSellers++;
-                        listingHidden = true;
-                        console.info("Hiding listing due to seller name match of " + seller + "...")
-                        //Bail from the info elements loop after exiting this one
-                        listingHidden = true;
-                        //Bail from this blacklisted seller loop
-                        break;
-                    }
-                }
-            }
-
-            //Bail from the info element loop if we've found a match above
-            if (listingHidden) { break; }
-
-            //If we have the feedback percent then do
-            if (percent) {
-                let feedback = parseFloat(percent);
-                //If feedback is low then do
-                if (feedback < userFeedback) {
-                    //Add our hidden style
-                    listingElements[countListing].classList.add("hidden");
-                    countPercentages++;
-                    listingHidden = true;
-                    console.info("Hiding listing due to low percentage match of " + feedback + "...")
-                    //Bail from the info elements loop
-                    break;
-                }
-            }
-
-            //If we have the feedback amount then do
-            if (ratings) {
-                //If amount is low then do
-                if (ratings < userRatings) {
-                    //Add our hidden style
-                    listingElements[countListing].classList.add("hidden");
-                    countRatings++;
-                    console.info("Hiding listing due to low rating match of " + ratings + "...")
-                    //Bail from the info elements loop
-                    break;
-                }
-            }
-        }
-    }
-
-    document.getElementById("eBSBToggleButton").innerHTML="<b>Hide Stats:</b><br>" + countSellers + " Seller Name<br>" + countKeywords + " Title Keyword<br>" + countPercentages + " Low Feedback<br>" + countRatings + " Low Ratings";
-}
-
-//Do on the search page
 if(window.location.href.includes("/sch/")) {
-    //Use the class that holds each listing
-    //let oneElements = document.querySelectorAll("span.s-item__seller-info-text");
-    //let twoElements = document.querySelectorAll("span.s-item__etrs-text");
-    //let threeElements = document.querySelectorAll("div.s-card__attribute-row");
-    let listingElements = document.querySelectorAll("li.s-card");
-    console.info("Found " + listingElements.length + " item listings...");
+	const objSelectors = {
+		"li.s-card": ["div.s-card__title", "su-styled-text", "div.s-card__attribute-row"],
+		"li.su-grid__item": ["a.su-item-card__title", "su-styled-text", "div.su-card-container__attributes"]
+	};
 
-    //If there are listings then do
-    if(listingElements.length > 0)
-    {
-        currentLayout(listingElements);
-    }
+	for (const [strSelector, arrArguments] of Object.entries(objSelectors)) {
+		let nodeListElements = document.querySelectorAll(strSelector);
+		console.info("Found " + nodeListElements.length + " item listings using `" + strSelector + "`...");
+		if(nodeListElements.length > 0) currentLayout(nodeListElements, ...arrArguments);
+	}
 }
