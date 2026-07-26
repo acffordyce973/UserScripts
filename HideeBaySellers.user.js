@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hide eBay Sellers
 // @namespace    https://www.ebay.co.uk/
-// @version      0.9.0
+// @version      0.9.1
 // @description  Adds a blacklist for sellers on eBay that will remove their results. Name blacklist should be comma-separated (no spaces) and supports * as a wildcard for one or more characters.
 // @author       ACF
 // @license      GPLv3
@@ -131,7 +131,10 @@ function currentLayout(nodeListElements, strTitleSelector, strTitleClass, strInf
 
 				try { strPercent = strSpanText.match(/(\d+(\.\d+)?%)/)[0]; } catch (error) { console.error("Could not find seller percentage - span " + intCountInfoSpan + ": " + error); }
 				try { strRatings = strSpanText.match(/\(([^)]+)\)/)[1]; } catch (error) { console.error("Could not find seller amount - span " + intCountInfoSpan + ": " + error); }
-				try { strSeller = strSpanText.split(" ")[0]; } catch (error) { console.error("Could not find seller name - span " + intCountInfoSpan + ": " + error); }
+
+				if (intCountInfoSpan > 0) {
+					try { strSeller = nodeInfoSpans[intCountInfoSpan - 1].textContent.trim(); } catch (error) { console.error("Could not find seller name - span " + (intCountInfoSpan - 1) + ": " + error); }
+				}
 			}
 
 			if(strSeller) {
@@ -180,6 +183,6 @@ if(window.location.href.includes("/sch/")) {
 	for (const [strSelector, arrArguments] of Object.entries(objSelectors)) {
 		let nodeListElements = document.querySelectorAll(strSelector);
 		console.info("Found " + nodeListElements.length + " item listings using `" + strSelector + "`...");
-		if(nodeListElements.length > 0) currentLayout(nodeListElements, ...arrArguments);
+		if (nodeListElements.length > 0) currentLayout(nodeListElements, ...arrArguments);
 	}
 }
