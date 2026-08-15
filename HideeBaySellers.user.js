@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         Hide eBay Sellers
 // @namespace    https://www.ebay.co.uk/
-// @version      0.9.1
-// @description  Adds a blacklist for sellers on eBay that will remove their results. Name blacklist should be comma-separated (no spaces) and supports * as a wildcard for one or more characters.
+// @version      0.9.3
+// @description  Adds a blacklist for both listing sellers and titles. Each blacklist should be comma-separated (no spaces) and supports * as a wildcard for one or more characters.
 // @author       ACF
 // @license      GPLv3
 // @updateURL    https://github.com/acffordyce973/UserScripts/raw/refs/heads/main/HideeBaySellers.user.js
 // @downloadURL  https://github.com/acffordyce973/UserScripts/raw/refs/heads/main/HideeBaySellers.user.js
-// @include      /^https:\/\/www\.ebay\.(co\.uk|com)\/(itm|sch|usr)\/.*/
+// @match        *://www.ebay.co.uk/sch/*
+// @match        *://www.ebay.com/sch/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=ebay.co.uk
 // @run-at       document-end
 // @grant        GM_getValue
@@ -15,62 +16,105 @@
 // @grant        GM_addStyle
 // ==/UserScript==
 
+//Save the script name to use later
+let strScriptName = GM_info.script.name;
+
+//Styles the box for the user to enter their blacklisted words or phrases
 GM_addStyle(`
-	#eBSBToggleButton {
+	#btnToggleBlacklistArea {
 		cursor: pointer;
+		display: block;
+		margin-bottom: 5px;
 	}
 
-	#eBSBBlacklistArea {
+	#areaBlacklist {
 		background-color: black;
 		color: white;
 		font-family: monospace;
 	}
 
-	#eBSBOuterDiv {
-		float: left;
+	#divOuterAreaBlacklist {
 		background-color: black;
 		color: white;
-		padding: 5px;
+		padding: 10px;
 		border: 1px solid white;
 		border-radius: 10px;
 		z-index: 2147483647;
-		display: block;
-		position: absolute;
+		position: fixed;
 		top: 5px;
 		left: 5px;
+		box-sizing: border-box;
+	}
+
+	#divOuterAreaBlacklist.fullscreen {
+		top: 0;
+		left: 0;
+		width: 100vw;
+		height: 100vh;
+		border-radius: 0;
+		display: flex;
+		flex-direction: column;
+	}
+
+	#divInnerAreaBlacklist {
+		display: flex;
+		flex-direction: column;
+		flex-grow: 1;
+		width: 100%;
+		gap: 10px;
+		margin-top: 10px;
 	}
 
 	.hidden {
-		display: none;
+		display: none !important;
+	}
+
+	#divInnerAreaBlacklist textarea {
+		flex-grow: 1;
+		width: 100%;
+		resize: none;
+		box-sizing: border-box;
+		background-color: #222;
+		color: white;
+		border: 1px solid #555;
+	}
+
+	#divInnerAreaBlacklist input[type="number"], #divInnerAreaBlacklist input[type="button"] {
+		width: 100%;
+		box-sizing: border-box;
+		padding: 5px;
 	}
 `);
 
+//Load the user options
 let arrUserBlacklist = GM_getValue("blacklist", []);
 let arrKeywordBlacklist = GM_getValue("keywords", []);
 let intUserFeedback = GM_getValue("feedback", 80);
 let intUserRatings = GM_getValue("ratings", 30);
 
+//Create the settings box and load the style from above
 let nodeNewBox = document.createElement("div");
 nodeNewBox.innerHTML = `
-<div id="eBSBOuterDiv">
-	<span id="eBSBToggleButton" title="Hide eBay Sellers"><b>Stats:</b><br>Inactive</span>
-		<div id="eBSBInnerDiv" class="hidden">
-			<br><b>Userscript Settings</b><br>
-			Hide sellers with a feedback percentage less than:<br>
-			<input type="number" id="intFeedbackPercentage" min="0" max="100" value="${intUserFeedback}"><br>
-			Hide sellers with a feedback total less than:<br>
-			<input type="number" id="intFeedbackAmount" min="0" max="500" value="${intUserRatings}"><br>
-			Comma-separated list of blacklisted keywords:<br>
-			<textarea id="txtKeywordBlacklist" rows="15" cols="176">${arrKeywordBlacklist}</textarea><br>
-			Comma-separated list of blacklisted sellers:<br>
-			<textarea id="txtUserBlacklist" rows="15" cols="176">${arrUserBlacklist}</textarea><br>
-			<i>Star (*) is supported as a basic wildcard.</i><br>
-			<input type="button" value="Save & Reload" id="eBSBSaveButton">
-		<div>
+<div id="divOuterAreaBlacklist">
+	<span id="btnToggleBlacklistArea" title="${strScriptName}"><b>Stats:</b><br>Inactive</span>
+	<div id="divInnerAreaBlacklist" class="hidden">
+		<b>Userscript Settings</b>
+		<label>Hide sellers with a feedback percentage less than:</label>
+		<input type="number" id="intFeedbackPercentage" min="0" max="100" value="${intUserFeedback}">
+		<label>Hide sellers with a feedback total less than:</label>
+		<input type="number" id="intFeedbackAmount" min="0" max="500" value="${intUserRatings}">
+		<label>Comma-separated list of blacklisted keywords (Star '*' is supported as a basic wildcard):</label>
+		<textarea id="txtKeywordBlacklist">${arrKeywordBlacklist}</textarea>
+		<label>Comma-separated list of blacklisted sellers (Star '*' is supported as a basic wildcard):</label>
+		<textarea id="txtUserBlacklist">${arrUserBlacklist}</textarea>
+		<input type="button" value="Save & Reload" id="eBSBSaveButton">
 	</div>
+</div>
 `;
+//Add the box to the start of the page
 document.body.append(nodeNewBox);
 
+//Handle when the user saves the options
 document.getElementById("eBSBSaveButton").onclick = function() {
 	GM_setValue("blacklist", document.getElementById("txtUserBlacklist").value.replace(/\s+/g, '').split(","));
 	GM_setValue("keywords", document.getElementById("txtKeywordBlacklist").value.split(","));
@@ -79,11 +123,19 @@ document.getElementById("eBSBSaveButton").onclick = function() {
 	location.reload();
 };
 
-document.getElementById("eBSBToggleButton").onclick = function() {
-	document.getElementById('eBSBInnerDiv').classList.toggle('hidden');
+//Handle when the user wants to open or close the settings
+document.getElementById("btnToggleBlacklistArea").onclick = function() {
+	document.getElementById('divInnerAreaBlacklist').classList.toggle('hidden');
+	document.getElementById('divOuterAreaBlacklist').classList.toggle('fullscreen');
 };
 
-function matchesRule(strString, strRule) { return new RegExp("^" + strRule.split("*").map((strMatch) => strMatch.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1")).join(".*") + "$").test(strString); }
+function matchesRule(str, rule) {
+    //If input string or rule are blank then ignore
+    if (str.trim().length === 0 || rule.trim().length === 0) { return false; }
+
+    var escapeRegex = (str) => str.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1");
+    return new RegExp("^" + rule.split("*").map(escapeRegex).join(".*") + "$").test(str);
+}
 
 function currentLayout(nodeListElements, strTitleSelector, strTitleClass, strInfoSelector) {
 	let intCountSellers = 0;
@@ -91,6 +143,7 @@ function currentLayout(nodeListElements, strTitleSelector, strTitleClass, strInf
 	let intCountPercentages = 0;
 	let intCountRatings = 0;
 
+    //Loop through each found element
 	for(let intCountListing = 0; intCountListing < nodeListElements.length; intCountListing++) {
 		let boolListingHidden = false;
 
@@ -171,7 +224,7 @@ function currentLayout(nodeListElements, strTitleSelector, strTitleClass, strInf
 		}
 	}
 
-	document.getElementById("eBSBToggleButton").innerHTML="<b>Hide Stats:</b><br>" + intCountSellers + " Seller Name<br>" + intCountKeywords + " Title Keyword<br>" + intCountPercentages + " Low Feedback<br>" + intCountRatings + " Low Ratings";
+	document.getElementById("btnToggleBlacklistArea").innerHTML="<b>Hide Stats:</b><br>" + intCountSellers + " Seller Name<br>" + intCountKeywords + " Title Keyword<br>" + intCountPercentages + " Low Feedback<br>" + intCountRatings + " Low Ratings";
 }
 
 if(window.location.href.includes("/sch/")) {
