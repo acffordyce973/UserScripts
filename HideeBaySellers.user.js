@@ -107,7 +107,7 @@ nodeNewBox.innerHTML = `
 		<textarea id="txtKeywordBlacklist">${arrKeywordBlacklist}</textarea>
 		<label>Comma-separated list of blacklisted sellers (Star '*' is supported as a basic wildcard):</label>
 		<textarea id="txtUserBlacklist">${arrUserBlacklist}</textarea>
-		<input type="button" value="Save & Reload" id="eBSBSaveButton">
+		<input type="button" value="Save & Reload" id="btnSaveBlacklist">
 	</div>
 </div>
 `;
@@ -115,7 +115,7 @@ nodeNewBox.innerHTML = `
 document.body.append(nodeNewBox);
 
 //Handle when the user saves the options
-document.getElementById("eBSBSaveButton").onclick = function() {
+document.getElementById("btnSaveBlacklist").onclick = function() {
 	GM_setValue("blacklist", document.getElementById("txtUserBlacklist").value.replace(/\s+/g, '').split(","));
 	GM_setValue("keywords", document.getElementById("txtKeywordBlacklist").value.split(","));
 	GM_setValue("feedback", parseInt(document.getElementById("intFeedbackPercentage").value));
