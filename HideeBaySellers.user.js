@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hide eBay Sellers
 // @namespace    https://www.ebay.co.uk/
-// @version      0.9.3
+// @version      0.9.4
 // @description  Adds a blacklist for both listing sellers and titles. Each blacklist should be comma-separated (no spaces) and supports * as a wildcard for one or more characters.
 // @author       ACF
 // @license      GPLv3
@@ -18,6 +18,8 @@
 
 //Save the script name to use later
 let strScriptName = GM_info.script.name;
+let pixBoxLeft = "5px";
+let pixBoxTop = "5px";
 
 //Styles the box for the user to enter their blacklisted words or phrases
 GM_addStyle(`
@@ -41,8 +43,8 @@ GM_addStyle(`
 		border-radius: 10px;
 		z-index: 2147483647;
 		position: fixed;
-		top: 5px;
-		left: 5px;
+		top: ${pixBoxTop};
+		left: ${pixBoxLeft};
 		box-sizing: border-box;
 	}
 
